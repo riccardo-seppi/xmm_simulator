@@ -453,14 +453,23 @@ def gen_phot_evtlist(xmmsim, tsim, with_skybkg=True, lhb=None, ght=None, ghn=Non
 
                 #select fraction of evts based on ARFs ratio and texp ratio
                 selfrac = xmmsim.all_arfs[yy,xx,kk]/eff_area * texp_ratio #make sure you select correct arf here
-                N_evts_out = np.random.poisson(len(evts_this_ene)*selfrac )
-                if N_evts_out>len(evts_this_ene):
-                    replace = True
-                else:
-                    replace = False
-                ids = np.random.choice(range(len(evts_this_ene)), size=N_evts_out, replace=replace)
-                final_idx = sel_idx[ids]
-                evts_clu_out = evts_this_ene[ids]
+
+                #old poisson approach
+                #N_evts_out = np.random.poisson(len(evts_this_ene)*selfrac )
+                #if N_evts_out>len(evts_this_ene):
+                #    replace = True
+                #else:
+                #    replace = False
+                #ids = np.random.choice(range(len(evts_this_ene)), size=N_evts_out, replace=replace)
+                #final_idx = sel_idx[ids]
+                #evts_clu_out = evts_this_ene[ids]
+
+                #new binomial thinning
+                n = len(evts_this_ene)
+                keep = np.random.rand(n) < selfrac
+                final_idx = sel_idx[keep]
+                evts_clu_out = evts_this_ene[keep]
+
                 if len(evts_clu_out)>0:
                     #Loop on evts to apply rmf
                     evts_clu_out_rmf = sample_rmf(evts_clu_out, ene_to_chan, rmf_mat_T, emb)
