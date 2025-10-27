@@ -148,18 +148,19 @@ def gen_phot_box(xmmsim, tsim, with_skybkg=True, lhb=None, ght=None, ghn=None, c
     return phot_box_ima
 
 
-def sample_rmf(energies, energy_to_channel, rmf_matrix_transposed, emb):
+def sample_rmf(energies, mc_ene_edges, rmf_matrix, emb):
     '''
     Function to convolve an array of energies with the RMF
     '''
     evts_clu_out_rmf = np.empty(len(energies), dtype=emb.dtype)
     for bb, evt in enumerate(energies):
-        channel = energy_to_channel(evt)
-        prob_dist = rmf_matrix_transposed[channel]  # or rmf.matrix.T ? Confirmed with Eckert, it's .T (P(E) tail at low E)
-        # Normalize probabilities
+        k = np.searchsorted(mc_ene_edges, evt, side='right')-1
+        k = np.clip(k, 0, len(mc_ene_edges)-2)
+
+        prob_dist = rmf_matrix.T[k]
         prob_dist /= np.sum(prob_dist)
-        # Sample new energy based on the probability distribution
         evts_clu_out_rmf[bb] = np.random.choice(emb, p=prob_dist)
+
     return evts_clu_out_rmf
 
 
@@ -203,10 +204,9 @@ def gen_phot_evtlist(xmmsim, tsim, with_skybkg=True, lhb=None, ght=None, ghn=Non
     rmf = OGIPResponse(rsp_file=rmf_file)
     nchan = len(rmf.monte_carlo_energies) - 1
     mc_ene = (rmf.monte_carlo_energies[:nchan] + rmf.monte_carlo_energies[1:]) / 2.
+    mc_ene_edges = rmf.monte_carlo_energies
     bin_width = rmf.monte_carlo_energies[1:] - rmf.monte_carlo_energies[:nchan]
     emb = (rmf.ebounds[1:] + rmf.ebounds[:-1]) / 2.
-    ene_to_chan = rmf.energy_to_channel
-    rmf_mat_T = rmf.matrix.T
 
     # Get mask file
     mask_file = get_data_file_path('imgs/%s_mask.fits.gz' % (xmmsim.instrument))
@@ -472,8 +472,7 @@ def gen_phot_evtlist(xmmsim, tsim, with_skybkg=True, lhb=None, ght=None, ghn=Non
 
                 if len(evts_clu_out)>0:
                     #Loop on evts to apply rmf
-                    evts_clu_out_rmf = sample_rmf(evts_clu_out, ene_to_chan, rmf_mat_T, emb)
-
+                    evts_clu_out_rmf = sample_rmf(evts_clu_out, mc_ene_edges, rmf.matrix, emb)
                     xx_out = x_clu_blurred_pix[final_idx]
                     yy_out = y_clu_blurred_pix[final_idx]
                     X_clu.append(xx_out)
