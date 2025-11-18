@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 from astropy.io import fits
 from .utils import get_data_file_path
@@ -356,12 +358,24 @@ def gen_phot_evtlist(xmmsim, tsim, with_skybkg=True, lhb=None, ght=None, ghn=Non
     #Let's add the cluster events by downgrading pyxsim input events
     #Read evtfile from pyxsim and its properties
     t0 = time.time()
-    with h5.File(xmmsim.evtfile_input, 'r') as f_pyxsim:
-        eff_area = f_pyxsim['parameters']['area'][()]
-        texp_evt = f_pyxsim['parameters']['exp_time'][()]
-        x_pix_out = np.floor(f_pyxsim['data']['xsky'][()] * 60. / pixsize + cx).astype(int)
-        y_pix_out = np.floor(f_pyxsim['data']['ysky'][()] * 60. / pixsize + cy).astype(int)
-        energy = f_pyxsim['data']['eobs'][()]
+    if xmmsim.evtfile_input.endswith('.h5') or xmmsim.evtfile_input.endswith('.hdf5'):
+        with h5.File(xmmsim.evtfile_input, 'r') as f_pyxsim:
+            eff_area = f_pyxsim['parameters']['area'][()]
+            texp_evt = f_pyxsim['parameters']['exp_time'][()]
+            x_pix_out = np.floor(f_pyxsim['data']['xsky'][()] * 60. / pixsize + cx).astype(int)
+            y_pix_out = np.floor(f_pyxsim['data']['ysky'][()] * 60. / pixsize + cy).astype(int)
+            energy = f_pyxsim['data']['eobs'][()]
+    elif xmmsim.evtfile_input.endswith('.fits') or xmmsim.evtfile_input.endswith('.fit'):
+        hdul = fits.open(xmmsim.evtfile_input)
+        eff_area = hdul[0].header['AREA']
+        texp_evt = hdul[0].header['TIME']
+        x_pix_out = np.floor(hdul[2].data['RA'] * 60. / pixsize + cx).astype(int)
+        y_pix_out = np.floor(hdul[2].data['DEC'] * 60. / pixsize + cy).astype(int)
+        energy = hdul[2].data['ENERGY']
+    else:
+        print(xmmsim.evtfile_input, 'is not .h5, .hdf5, .fits, .fit!')
+        sys.exit()
+
     texp_ratio = tsim / texp_evt
 
     xoffset = int(xori[int(len(xori)/2.)])
