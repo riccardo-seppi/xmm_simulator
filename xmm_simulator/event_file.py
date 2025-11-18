@@ -369,8 +369,8 @@ def gen_phot_evtlist(xmmsim, tsim, with_skybkg=True, lhb=None, ght=None, ghn=Non
         hdul = fits.open(xmmsim.evtfile_input)
         eff_area = hdul[0].header['AREA']
         texp_evt = hdul[0].header['TIME']
-        x_pix_out = np.floor(hdul[2].data['RA'] * 60. / pixsize + cx).astype(int)
-        y_pix_out = np.floor(hdul[2].data['DEC'] * 60. / pixsize + cy).astype(int)
+        x_pix_out = np.floor( (hdul[2].data['RA']-np.median(hdul[2].data['RA'])) * 60. / pixsize + cx).astype(int)
+        y_pix_out = np.floor( (hdul[2].data['DEC']-np.median(hdul[2].data['DEC'])) * 60. / pixsize + cy).astype(int)
         energy = hdul[2].data['ENERGY']
     else:
         print(xmmsim.evtfile_input, 'is not .h5, .hdf5, .fits, .fit!')
